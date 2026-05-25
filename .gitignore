@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.smooth-ssh-mcp/
+coverage/
+*.log
+hosts.yaml
+hosts.json

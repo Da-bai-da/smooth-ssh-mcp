@@ -1,0 +1,79 @@
+hosts:
+  - id: lab-linux
+    hostname: 192.0.2.10
+    user: ubuntu
+    port: 22
+    identityFile: ~/.ssh/lab.pem
+    environment: dev
+    tags: [linux, lab]
+    capabilities:
+      sudo: true
+      systemd: true
+    policy:
+      allowExec: true
+      allowPty: true
+      allowUpload: true
+      allowDownload: true
+      allowForward: true
+      acceptNewHostKey: false
+      permissionLevel: 2
+      maxCommandSeconds: 30
+      maxOutputBytes: 65536
+
+  - id: prod-api
+    hostname: 203.0.113.10
+    user: root
+    port: 22
+    environment: prod
+    riskLevel: high
+    tags: [prod, api, nginx]
+    policy:
+      allowExec: true
+      allowPty: true
+      allowUpload: false
+      allowDownload: false
+      allowForward: true
+      acceptNewHostKey: false
+      permissionLevel: 2
+      requireConfirmForProd: true
+      requireConfirmForSudo: true
+      requireConfirmForWrite: true
+      maxCommandSeconds: 20
+      maxOutputBytes: 65536
+
+  - id: password-vps
+    hostname: 203.0.113.20
+    user: root
+    port: 22
+    passwordEnv: SMOOTH_SSH_PASSWORD_PASSWORD_VPS
+    environment: prod
+    riskLevel: high
+    tags: [prod, password-env]
+    policy:
+      allowExec: true
+      allowPty: false
+      allowUpload: false
+      allowDownload: false
+      allowForward: false
+      acceptNewHostKey: false
+      permissionLevel: 2
+      requireConfirmForProd: true
+      requireConfirmForSudo: true
+      requireConfirmForWrite: true
+      maxCommandSeconds: 20
+      maxOutputBytes: 65536
+
+  - id: openwrt-gateway
+    sshConfigHost: openwrt-gw
+    environment: staging
+    tags: [openwrt, gateway]
+    capabilities:
+      openwrt: true
+    policy:
+      allowExec: true
+      allowPty: true
+      allowUpload: false
+      allowDownload: false
+      allowForward: false
+      acceptNewHostKey: false
+      permissionLevel: 2

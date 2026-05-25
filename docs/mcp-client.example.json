@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "smooth-ssh": {
+      "command": "node",
+      "args": [
+        "/path/to/smooth-ssh-mcp/dist/server.js",
+        "--config",
+        "/home/you/.config/smooth-ssh-mcp/hosts.yaml"
+      ],
+      "env": {
+        "SMOOTH_SSH_PASSWORD_VPS_PASSWORD": "set-this-in-your-client-secret-env"
+      }
+    }
+  }
+}

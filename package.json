@@ -1,0 +1,29 @@
+{
+  "name": "smooth-ssh-mcp",
+  "version": "0.1.0",
+  "description": "An MCP server for managed OpenSSH connections, command execution, interactive sessions, file transfer, and port forwards.",
+  "type": "module",
+  "bin": {
+    "smooth-ssh-mcp": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "yaml": "^2.8.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
