@@ -8,7 +8,7 @@
         "/home/you/.config/smooth-ssh-mcp/hosts.yaml"
       ],
       "env": {
-        "SMOOTH_SSH_PASSWORD_VPS_PASSWORD": "set-this-in-your-client-secret-env"
+        "SMOOTH_SSH_PASSWORD_PASSWORD_VPS": "set-this-in-your-client-secret-env"
       }
     }
   }
