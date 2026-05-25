@@ -22,7 +22,10 @@ npm install
 npm run build
 node dist/server.js init
 node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+node dist/server.js --help
 ```
+
+After npm publication, use `npm install -g smooth-ssh-mcp` and replace `node dist/server.js` with `smooth-ssh-mcp`.
 
 See the language-specific README for host inventory, MCP client configuration, permission levels, confirmation flow, and security model.
 

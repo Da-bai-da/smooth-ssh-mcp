@@ -53,6 +53,8 @@
 - 系统 OpenSSH 客户端：`ssh`、`scp`
 - 如果使用密码登录，需要安装 `sshpass`
 
+从 GitHub 源码安装：
+
 ```bash
 git clone https://github.com/Da-bai-da/smooth-ssh-mcp.git
 cd smooth-ssh-mcp
@@ -60,6 +62,16 @@ npm install
 npm run build
 node dist/server.js init
 node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+```
+
+发布到 npm 后也可以全局安装：
+
+```bash
+npm install -g smooth-ssh-mcp
+smooth-ssh-mcp init
+smooth-ssh-mcp doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+smooth-ssh-mcp --help
+smooth-ssh-mcp --version
 ```
 
 ## 初始化配置
@@ -300,7 +312,8 @@ SMOOTH_SSH_MCP_AUDIT_LOG=/path/to/audit.jsonl smooth-ssh-mcp
 npm test
 npm run typecheck
 npm run build
+npm run test:cli
 npm pack --dry-run
 ```
 
-GitHub Actions 会在 push 和 pull request 上运行 `npm ci`、`npm run typecheck`、`npm test` 和 `npm run build`。
+GitHub Actions 会在 push 和 pull request 上运行 `npm ci`、`npm run typecheck`、`npm test`、`npm run build`、CLI smoke test 和 `npm pack --dry-run`。

@@ -2,8 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    include: ["tests/**/*.test.ts"],
-    exclude: ["tests/cliSmoke.test.ts"],
+    include: ["tests/cliSmoke.test.ts"],
     globals: false,
     restoreMocks: true
   }

@@ -53,6 +53,8 @@ Requirements:
 - System OpenSSH clients: `ssh`, `scp`
 - `sshpass` if password authentication is used
 
+Install from the GitHub source tree:
+
 ```bash
 git clone https://github.com/Da-bai-da/smooth-ssh-mcp.git
 cd smooth-ssh-mcp
@@ -60,6 +62,16 @@ npm install
 npm run build
 node dist/server.js init
 node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+```
+
+After npm publication, it can also be installed globally:
+
+```bash
+npm install -g smooth-ssh-mcp
+smooth-ssh-mcp init
+smooth-ssh-mcp doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+smooth-ssh-mcp --help
+smooth-ssh-mcp --version
 ```
 
 ## Initialize Configuration
@@ -300,7 +312,8 @@ The state file stores only host IDs, timestamps, use counts, use reasons, and pe
 npm test
 npm run typecheck
 npm run build
+npm run test:cli
 npm pack --dry-run
 ```
 
-GitHub Actions runs `npm ci`, `npm run typecheck`, `npm test`, and `npm run build` on pushes and pull requests.
+GitHub Actions runs `npm ci`, `npm run typecheck`, `npm test`, `npm run build`, CLI smoke tests, and `npm pack --dry-run` on pushes and pull requests.

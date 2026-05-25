@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/server.ts",
     "test": "vitest run",
+    "test:cli": "vitest run --config vitest.cli.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepack": "npm run build"
   },

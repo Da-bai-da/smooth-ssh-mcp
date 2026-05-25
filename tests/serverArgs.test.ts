@@ -32,4 +32,11 @@ describe("server args", () => {
       force: true
     });
   });
+
+  it("parses help and version flags before serve mode", () => {
+    expect(parseArgs(["--help"])).toMatchObject({ mode: "help" });
+    expect(parseArgs(["-h"])).toMatchObject({ mode: "help" });
+    expect(parseArgs(["--version"])).toMatchObject({ mode: "version" });
+    expect(parseArgs(["-v"])).toMatchObject({ mode: "version" });
+  });
 });

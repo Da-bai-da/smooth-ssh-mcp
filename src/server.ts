@@ -10,8 +10,10 @@ import { JsonlAuditor } from "./audit.js";
 import { SshOperations } from "./operations.js";
 import type { Inventory } from "./types.js";
 
-export function parseArgs(argv: string[]): { mode: "serve" | "doctor" | "init"; configPath: string; secretsPath?: string; json: boolean; force: boolean } {
-  const mode = argv[0] === "doctor" ? "doctor" : argv[0] === "init" ? "init" : "serve";
+const VERSION = "0.1.0";
+
+export function parseArgs(argv: string[]): { mode: "serve" | "doctor" | "init" | "help" | "version"; configPath: string; secretsPath?: string; json: boolean; force: boolean } {
+  const mode = argv[0] === "--help" || argv[0] === "-h" ? "help" : argv[0] === "--version" || argv[0] === "-v" ? "version" : argv[0] === "doctor" ? "doctor" : argv[0] === "init" ? "init" : "serve";
   const args = mode === "serve" ? argv : argv.slice(1);
   const configIndex = args.findIndex((arg) => arg === "--config" || arg === "-c");
   if (configIndex >= 0) {
@@ -30,6 +32,26 @@ function parseOptionalValue(argv: string[], flag: string): string | undefined {
   return value;
 }
 
+
+function formatHelp(): string {
+  return [
+    "smooth-ssh-mcp 0.1.0",
+    "",
+    "Usage:",
+    "  smooth-ssh-mcp [--config <hosts.yaml>]",
+    "  smooth-ssh-mcp init [--config <hosts.yaml>] [--secrets <secrets.env>] [--force] [--json]",
+    "  smooth-ssh-mcp doctor [--config <hosts.yaml>] [--secrets <secrets.env>] [--json]",
+    "",
+    "Options:",
+    "  -c, --config <path>  Host inventory path",
+    "  --secrets <path>     Secrets env file path for init and doctor",
+    "  --force              Regenerate init files even when they already exist",
+    "  --json               Print JSON for init and doctor",
+    "  -h, --help           Show this help",
+    "  -v, --version        Show version"
+  ].join("\n");
+}
+
 function loadInventoryForServer(configPath: string): Inventory {
   const expanded = configPath.startsWith("~/")
     ? `${process.env.HOME ?? ""}${configPath.slice(1)}`
@@ -46,6 +68,14 @@ function loadInventoryForServer(configPath: string): Inventory {
 
 export async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  if (args.mode === "help") {
+    console.log(formatHelp());
+    process.exit(0);
+  }
+  if (args.mode === "version") {
+    console.log(VERSION);
+    process.exit(0);
+  }
   if (args.mode === "doctor") {
     const report = runDoctor({ configPath: args.configPath, secretsPath: args.secretsPath });
     console.log(args.json ? JSON.stringify(report, null, 2) : formatDoctorReport(report));
