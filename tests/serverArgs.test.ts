@@ -8,7 +8,8 @@ describe("server args", () => {
       mode: "serve",
       configPath: "/tmp/hosts.yaml",
       secretsPath: undefined,
-      json: false
+      json: false,
+      force: false
     });
   });
 
@@ -17,7 +18,18 @@ describe("server args", () => {
       mode: "doctor",
       configPath: "/tmp/hosts.yaml",
       secretsPath: "/tmp/secrets.env",
-      json: true
+      json: true,
+      force: false
+    });
+  });
+
+  it("parses init mode force and output flags", () => {
+    expect(parseArgs(["init", "--config", "/tmp/hosts.yaml", "--secrets", "/tmp/secrets.env", "--force", "--json"])).toEqual({
+      mode: "init",
+      configPath: "/tmp/hosts.yaml",
+      secretsPath: "/tmp/secrets.env",
+      json: true,
+      force: true
     });
   });
 });

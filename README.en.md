@@ -58,18 +58,26 @@ git clone https://github.com/Da-bai-da/smooth-ssh-mcp.git
 cd smooth-ssh-mcp
 npm install
 npm run build
-node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
+node dist/server.js init
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+```
+
+## Initialize Configuration
+
+Run `init` first to create a local configuration skeleton:
+
+```bash
+node dist/server.js init
+```
+
+By default it writes `~/.config/smooth-ssh-mcp/hosts.yaml` and `~/.config/smooth-ssh-mcp/secrets.env`, with directory mode `700` and file mode `600`. If files already exist, `init` preserves them; add `--force` only when you want to regenerate them.
+
+```bash
+node dist/server.js init --force
+node dist/server.js init --config /path/to/hosts.yaml --secrets /path/to/secrets.env
 ```
 
 ## Host Configuration
-
-Copy the example inventory:
-
-```bash
-mkdir -p ~/.config/smooth-ssh-mcp
-cp examples/hosts.example.yaml ~/.config/smooth-ssh-mcp/hosts.yaml
-chmod 600 ~/.config/smooth-ssh-mcp/hosts.yaml
-```
 
 Minimal host:
 
@@ -118,8 +126,8 @@ Do not put real passwords in `hosts.yaml`. Put them in your MCP client's secret 
 The `doctor` subcommand checks the Node.js version, `ssh`, `scp`, optional `sshpass`, inventory file, secrets file, and file permissions.
 
 ```bash
-node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
-node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --json
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env --json
 ```
 
 ## MCP Client Configuration

@@ -58,18 +58,26 @@ git clone https://github.com/Da-bai-da/smooth-ssh-mcp.git
 cd smooth-ssh-mcp
 npm install
 npm run build
-node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
+node dist/server.js init
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+```
+
+## 初始化配置
+
+推荐先运行 `init` 生成本地配置骨架：
+
+```bash
+node dist/server.js init
+```
+
+默认写入 `~/.config/smooth-ssh-mcp/hosts.yaml` 和 `~/.config/smooth-ssh-mcp/secrets.env`，目录权限为 `700`，文件权限为 `600`。如果文件已存在，`init` 会保留原文件；需要重新生成时再加 `--force`。
+
+```bash
+node dist/server.js init --force
+node dist/server.js init --config /path/to/hosts.yaml --secrets /path/to/secrets.env
 ```
 
 ## 配置主机
-
-复制示例：
-
-```bash
-mkdir -p ~/.config/smooth-ssh-mcp
-cp examples/hosts.example.yaml ~/.config/smooth-ssh-mcp/hosts.yaml
-chmod 600 ~/.config/smooth-ssh-mcp/hosts.yaml
-```
 
 最小配置示例：
 
@@ -118,8 +126,8 @@ hosts:
 `doctor` 子命令会检查 Node.js 版本、`ssh`、`scp`、可选的 `sshpass`、inventory 文件、secrets 文件和权限。
 
 ```bash
-node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
-node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --json
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secrets ~/.config/smooth-ssh-mcp/secrets.env --json
 ```
 
 ## MCP 客户端配置

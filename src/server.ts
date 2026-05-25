@@ -5,20 +5,21 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { defaultInventoryPath, loadInventory } from "./inventory.js";
 import { createMcpServer } from "./mcpServer.js";
 import { formatDoctorReport, runDoctor } from "./doctor.js";
+import { formatInitReport, runInit } from "./init.js";
 import { JsonlAuditor } from "./audit.js";
 import { SshOperations } from "./operations.js";
 import type { Inventory } from "./types.js";
 
-export function parseArgs(argv: string[]): { mode: "serve" | "doctor"; configPath: string; secretsPath?: string; json: boolean } {
-  const mode = argv[0] === "doctor" ? "doctor" : "serve";
-  const args = mode === "doctor" ? argv.slice(1) : argv;
+export function parseArgs(argv: string[]): { mode: "serve" | "doctor" | "init"; configPath: string; secretsPath?: string; json: boolean; force: boolean } {
+  const mode = argv[0] === "doctor" ? "doctor" : argv[0] === "init" ? "init" : "serve";
+  const args = mode === "serve" ? argv : argv.slice(1);
   const configIndex = args.findIndex((arg) => arg === "--config" || arg === "-c");
   if (configIndex >= 0) {
     const value = args[configIndex + 1];
     if (!value) throw new Error("--config requires a file path");
-    return { mode, configPath: value, secretsPath: parseOptionalValue(args, "--secrets"), json: args.includes("--json") };
+    return { mode, configPath: value, secretsPath: parseOptionalValue(args, "--secrets"), json: args.includes("--json"), force: args.includes("--force") };
   }
-  return { mode, configPath: defaultInventoryPath(), secretsPath: parseOptionalValue(args, "--secrets"), json: args.includes("--json") };
+  return { mode, configPath: defaultInventoryPath(), secretsPath: parseOptionalValue(args, "--secrets"), json: args.includes("--json"), force: args.includes("--force") };
 }
 
 function parseOptionalValue(argv: string[], flag: string): string | undefined {
@@ -48,6 +49,11 @@ export async function main(): Promise<void> {
   if (args.mode === "doctor") {
     const report = runDoctor({ configPath: args.configPath, secretsPath: args.secretsPath });
     console.log(args.json ? JSON.stringify(report, null, 2) : formatDoctorReport(report));
+    process.exit(report.ok ? 0 : 1);
+  }
+  if (args.mode === "init") {
+    const report = runInit({ configPath: args.configPath, secretsPath: args.secretsPath, force: args.force });
+    console.log(args.json ? JSON.stringify(report, null, 2) : formatInitReport(report));
     process.exit(report.ok ? 0 : 1);
   }
   const { configPath } = args;
