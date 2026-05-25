@@ -1,7 +1,7 @@
 {
   "name": "smooth-ssh-mcp",
   "version": "0.1.0",
-  "description": "An MCP server for managed OpenSSH connections, command execution, interactive sessions, file transfer, and port forwards.",
+  "description": "MCP server for safer, structured OpenSSH operations by AI assistants.",
   "type": "module",
   "bin": {
     "smooth-ssh-mcp": "dist/server.js"
@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/server.ts",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -25,5 +26,32 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/Da-bai-da/smooth-ssh-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Da-bai-da/smooth-ssh-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Da-bai-da/smooth-ssh-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "ssh",
+    "openssh",
+    "ai",
+    "codex",
+    "remote-ops"
+  ],
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "README.en.md",
+    "README.zh-CN.md",
+    "LICENSE",
+    "examples",
+    "docs"
+  ]
 }

@@ -229,4 +229,32 @@ describe("MCP tool metadata", () => {
       }
     ]);
   });
+  it("audits registered tool calls without changing tool output", async () => {
+    const records: Array<Record<string, unknown>> = [];
+    const operations = {
+      hostList: () => [{ id: "prod-api", hasIdentityFile: false, hasPasswordEnv: false }]
+    } as unknown as SshOperations;
+    const server = createMcpServer(operations, {
+      auditor: {
+        recordToolCall: (call) => records.push(call as unknown as Record<string, unknown>)
+      }
+    });
+    const mcp = server as unknown as {
+      _registeredTools: Record<string, { handler: (input: unknown) => Promise<unknown> }>;
+    };
+
+    const result = await mcp._registeredTools.host_list.handler({});
+
+    expect(JSON.parse((result as { content: Array<{ text: string }> }).content[0].text)).toMatchObject({
+      hosts: [{ id: "prod-api" }]
+    });
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      tool: "host_list",
+      input: {},
+      result: { hosts: [{ id: "prod-api" }] }
+    });
+    expect(typeof records[0].durationMs).toBe("number");
+  });
+
 });

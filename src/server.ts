@@ -1,19 +1,32 @@
 #!/usr/bin/env node
 import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { defaultInventoryPath, loadInventory } from "./inventory.js";
 import { createMcpServer } from "./mcpServer.js";
+import { formatDoctorReport, runDoctor } from "./doctor.js";
+import { JsonlAuditor } from "./audit.js";
 import { SshOperations } from "./operations.js";
 import type { Inventory } from "./types.js";
 
-function parseArgs(argv: string[]): { configPath: string } {
-  const configIndex = argv.findIndex((arg) => arg === "--config" || arg === "-c");
+export function parseArgs(argv: string[]): { mode: "serve" | "doctor"; configPath: string; secretsPath?: string; json: boolean } {
+  const mode = argv[0] === "doctor" ? "doctor" : "serve";
+  const args = mode === "doctor" ? argv.slice(1) : argv;
+  const configIndex = args.findIndex((arg) => arg === "--config" || arg === "-c");
   if (configIndex >= 0) {
-    const value = argv[configIndex + 1];
+    const value = args[configIndex + 1];
     if (!value) throw new Error("--config requires a file path");
-    return { configPath: value };
+    return { mode, configPath: value, secretsPath: parseOptionalValue(args, "--secrets"), json: args.includes("--json") };
   }
-  return { configPath: defaultInventoryPath() };
+  return { mode, configPath: defaultInventoryPath(), secretsPath: parseOptionalValue(args, "--secrets"), json: args.includes("--json") };
+}
+
+function parseOptionalValue(argv: string[], flag: string): string | undefined {
+  const index = argv.findIndex((arg) => arg === flag);
+  if (index < 0) return undefined;
+  const value = argv[index + 1];
+  if (!value) throw new Error(`${flag} requires a file path`);
+  return value;
 }
 
 function loadInventoryForServer(configPath: string): Inventory {
@@ -30,12 +43,18 @@ function loadInventoryForServer(configPath: string): Inventory {
   return loadInventory(configPath);
 }
 
-async function main(): Promise<void> {
-  const { configPath } = parseArgs(process.argv.slice(2));
+export async function main(): Promise<void> {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.mode === "doctor") {
+    const report = runDoctor({ configPath: args.configPath, secretsPath: args.secretsPath });
+    console.log(args.json ? JSON.stringify(report, null, 2) : formatDoctorReport(report));
+    process.exit(report.ok ? 0 : 1);
+  }
+  const { configPath } = args;
   const inventory = loadInventoryForServer(configPath);
   const operations = new SshOperations({ inventory });
   installShutdownCleanup(operations);
-  const server = createMcpServer(operations);
+  const server = createMcpServer(operations, { auditor: new JsonlAuditor() });
   process.stdin.resume();
   await server.connect(new StdioServerTransport());
   console.error(`[smooth-ssh-mcp] Running on stdio with ${inventory.hosts.length} configured hosts.`);
@@ -64,7 +83,13 @@ function keepStdioServerAlive(): Promise<void> {
   return new Promise(() => undefined);
 }
 
-main().catch((error) => {
-  console.error("[smooth-ssh-mcp] Fatal error:", error);
-  process.exit(1);
-});
+if (isDirectExecution()) {
+  main().catch((error) => {
+    console.error("[smooth-ssh-mcp] Fatal error:", error);
+    process.exit(1);
+  });
+}
+
+function isDirectExecution(): boolean {
+  return process.argv[1] === fileURLToPath(import.meta.url);
+}

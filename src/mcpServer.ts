@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { SshOperations } from "./operations.js";
+import type { Auditor } from "./audit.js";
 import type { ConfirmationRequired } from "./types.js";
 
 const LOCAL_READ_HINT: ToolAnnotations = {
@@ -39,11 +40,16 @@ const RISK_GATED_REMOTE_HINT: ToolAnnotations = {
   openWorldHint: true
 };
 
-export function createMcpServer(operations: SshOperations): McpServer {
+type McpServerOptions = {
+  auditor?: Auditor;
+};
+
+export function createMcpServer(operations: SshOperations, options: McpServerOptions = {}): McpServer {
   const server = new McpServer({
     name: "smooth-ssh-mcp",
     version: "0.1.0"
   });
+  const toolHandler = createToolHandler(options.auditor);
 
   server.registerTool(
     "host_list",
@@ -53,7 +59,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
       annotations: LOCAL_READ_HINT,
       inputSchema: {}
     },
-    async () => jsonResult({ hosts: operations.hostList() })
+    toolHandler("host_list", async () => ({ hosts: operations.hostList() }))
   );
 
   server.registerTool(
@@ -66,7 +72,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         hostId: z.string().min(1)
       }
     },
-    async ({ hostId }) => jsonResult(operations.hostGet(hostId))
+    toolHandler("host_get", async ({ hostId }) => operations.hostGet(hostId))
   );
 
   server.registerTool(
@@ -79,7 +85,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         hostId: z.string().min(1)
       }
     },
-    async (input) => jsonResult(operations.hostSelect(input))
+    toolHandler("host_select", async (input) => operations.hostSelect(input))
   );
 
   server.registerTool(
@@ -90,7 +96,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
       annotations: LOCAL_READ_HINT,
       inputSchema: {}
     },
-    async () => jsonResult(operations.hostRecent())
+    toolHandler("host_recent", async () => operations.hostRecent())
   );
 
   server.registerTool(
@@ -105,7 +111,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.hostPermissionSet(confirmedInput)))
+    toolHandler("host_permission_set", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.hostPermissionSet(confirmedInput)))
   );
 
   server.registerTool(
@@ -116,7 +122,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
       annotations: LOCAL_READ_HINT,
       inputSchema: {}
     },
-    async () => jsonResult(operations.capabilityList())
+    toolHandler("capability_list", async () => operations.capabilityList())
   );
 
   server.registerTool(
@@ -134,7 +140,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.hostConnect(confirmedInput)))
+    toolHandler("host_connect", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.hostConnect(confirmedInput)))
   );
 
   server.registerTool(
@@ -148,7 +154,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         timeoutMs: z.number().int().min(1000).max(120000).optional()
       }
     },
-    async (input) => jsonResult(await operations.sshProbe(input))
+    toolHandler("ssh_probe", async (input) => operations.sshProbe(input))
   );
 
   server.registerTool(
@@ -168,7 +174,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.sshExec(confirmedInput)))
+    toolHandler("ssh_exec", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.sshExec(confirmedInput)))
   );
 
   server.registerTool(
@@ -188,7 +194,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.sshCommand(confirmedInput)))
+    toolHandler("ssh_command", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.sshCommand(confirmedInput)))
   );
 
   server.registerTool(
@@ -214,7 +220,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.taskBatch(confirmedInput)))
+    toolHandler("task_batch", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.taskBatch(confirmedInput)))
   );
 
   server.registerTool(
@@ -237,7 +243,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.cleanupPaths(confirmedInput)))
+    toolHandler("cleanup_paths", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.cleanupPaths(confirmedInput)))
   );
 
   server.registerTool(
@@ -254,7 +260,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         detail: z.enum(["compact", "full"]).optional()
       }
     },
-    async (input) => jsonResult(await operations.hostHealth(input))
+    toolHandler("host_health", async (input) => operations.hostHealth(input))
   );
 
   server.registerTool(
@@ -268,7 +274,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, async (confirmedInput) => operations.sessionStart(confirmedInput)))
+    toolHandler("session_start", async (input) => runWithOptionalChoiceConfirmation(server, input, async (confirmedInput) => operations.sessionStart(confirmedInput)))
   );
 
   server.registerTool(
@@ -283,7 +289,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.sessionSend(confirmedInput)))
+    toolHandler("session_send", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.sessionSend(confirmedInput)))
   );
 
   server.registerTool(
@@ -297,7 +303,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         maxBytes: z.number().int().min(1).max(1024 * 1024).optional()
       }
     },
-    async (input) => jsonResult(operations.sessionRead(input))
+    toolHandler("session_read", async (input) => operations.sessionRead(input))
   );
 
   server.registerTool(
@@ -310,7 +316,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         sessionId: z.string().min(1)
       }
     },
-    async (input) => jsonResult(operations.sessionStop(input))
+    toolHandler("session_stop", async (input) => operations.sessionStop(input))
   );
 
   server.registerTool(
@@ -321,7 +327,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
       annotations: CONNECTION_HINT,
       inputSchema: {}
     },
-    async () => jsonResult({ sessions: operations.sessionList() })
+    toolHandler("session_list", async () => ({ sessions: operations.sessionList() }))
   );
 
   server.registerTool(
@@ -337,7 +343,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.fileUpload(confirmedInput)))
+    toolHandler("file_upload", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.fileUpload(confirmedInput)))
   );
 
   server.registerTool(
@@ -353,7 +359,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.fileDownload(confirmedInput)))
+    toolHandler("file_download", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.fileDownload(confirmedInput)))
   );
 
   server.registerTool(
@@ -371,7 +377,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         confirmationToken: z.string().optional()
       }
     },
-    async (input) => jsonResult(await runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.forwardStart(confirmedInput)))
+    toolHandler("forward_start", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.forwardStart(confirmedInput)))
   );
 
   server.registerTool(
@@ -384,7 +390,7 @@ export function createMcpServer(operations: SshOperations): McpServer {
         forwardId: z.string().min(1)
       }
     },
-    async (input) => jsonResult(operations.forwardStop(input))
+    toolHandler("forward_stop", async (input) => operations.forwardStop(input))
   );
 
   server.registerTool(
@@ -395,10 +401,37 @@ export function createMcpServer(operations: SshOperations): McpServer {
       annotations: CONNECTION_HINT,
       inputSchema: {}
     },
-    async () => jsonResult({ forwards: operations.forwardList() })
+    toolHandler("forward_list", async () => ({ forwards: operations.forwardList() }))
   );
 
   return server;
+}
+
+type ToolInput = any;
+
+function createToolHandler(auditor: Auditor | undefined) {
+  return (tool: string, run: (input: ToolInput) => Promise<unknown> | unknown) =>
+    async (input: ToolInput) => {
+      const startedAt = Date.now();
+      try {
+        const result = await run(input);
+        auditor?.recordToolCall({
+          tool,
+          input,
+          result,
+          durationMs: Date.now() - startedAt
+        });
+        return jsonResult(result);
+      } catch (error) {
+        auditor?.recordToolCall({
+          tool,
+          input,
+          result: { error: error instanceof Error ? error.message : String(error) },
+          durationMs: Date.now() - startedAt
+        });
+        throw error;
+      }
+    };
 }
 
 function jsonResult(data: unknown) {

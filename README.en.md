@@ -58,6 +58,7 @@ git clone https://github.com/Da-bai-da/smooth-ssh-mcp.git
 cd smooth-ssh-mcp
 npm install
 npm run build
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
 ```
 
 ## Host Configuration
@@ -111,6 +112,15 @@ hosts:
 ```
 
 Do not put real passwords in `hosts.yaml`. Put them in your MCP client's secret env, or load them through the local wrapper.
+
+## Doctor Checks
+
+The `doctor` subcommand checks the Node.js version, `ssh`, `scp`, optional `sshpass`, inventory file, secrets file, and file permissions.
+
+```bash
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --json
+```
 
 ## MCP Client Configuration
 
@@ -249,6 +259,23 @@ Default policies include:
 - `acceptNewHostKey: true` only lets OpenSSH save first-seen host keys; changed host keys are still rejected by OpenSSH.
 - Password authentication reads from environment variables only and passes the value to `sshpass -e` through `SSHPASS`.
 
+## Audit Log
+
+When the MCP server runs, it writes JSONL audit logs by default:
+
+```text
+~/.config/smooth-ssh-mcp/audit.jsonl
+```
+
+Audit entries include tool name, hostId, operation, result kind, exit code, duration, truncation state, and redaction counts. `confirmationToken`, `env`, `stdin`, password fields, and secret fields are written as `[REDACTED]`.
+
+Environment overrides:
+
+```bash
+SMOOTH_SSH_MCP_AUDIT=0 smooth-ssh-mcp
+SMOOTH_SSH_MCP_AUDIT_LOG=/path/to/audit.jsonl smooth-ssh-mcp
+```
+
 ## State File
 
 `host_select`, `host_recent`, and `host_permission_set` write to:
@@ -265,4 +292,7 @@ The state file stores only host IDs, timestamps, use counts, use reasons, and pe
 npm test
 npm run typecheck
 npm run build
+npm pack --dry-run
 ```
+
+GitHub Actions runs `npm ci`, `npm run typecheck`, `npm test`, and `npm run build` on pushes and pull requests.

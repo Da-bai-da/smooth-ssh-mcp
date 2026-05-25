@@ -58,6 +58,7 @@ git clone https://github.com/Da-bai-da/smooth-ssh-mcp.git
 cd smooth-ssh-mcp
 npm install
 npm run build
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
 ```
 
 ## 配置主机
@@ -111,6 +112,15 @@ hosts:
 ```
 
 真实密码可以放在 MCP client 的 secret env，或用 wrapper 加载本机 secrets 文件。
+
+## Doctor 检查
+
+`doctor` 子命令会检查 Node.js 版本、`ssh`、`scp`、可选的 `sshpass`、inventory 文件、secrets 文件和权限。
+
+```bash
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --json
+```
 
 ## MCP 客户端配置
 
@@ -249,6 +259,23 @@ wrapper 默认读取：
 - `acceptNewHostKey: true` 只允许 OpenSSH 对首次连接保存新 host key；已变更的 host key 仍由 OpenSSH 拒绝。
 - 密码认证只从环境变量读取，并通过 `SSHPASS` 传给 `sshpass -e`。
 
+## 审计日志
+
+运行 MCP server 时默认写入 JSONL 审计日志：
+
+```text
+~/.config/smooth-ssh-mcp/audit.jsonl
+```
+
+审计记录包含 tool 名称、hostId、operation、结果类型、退出码、耗时、截断状态和脱敏统计。`confirmationToken`、`env`、`stdin`、密码和 secret 字段会被写成 `[REDACTED]`。
+
+可通过环境变量调整：
+
+```bash
+SMOOTH_SSH_MCP_AUDIT=0 smooth-ssh-mcp
+SMOOTH_SSH_MCP_AUDIT_LOG=/path/to/audit.jsonl smooth-ssh-mcp
+```
+
 ## 状态文件
 
 `host_select`、`host_recent`、`host_permission_set` 会写入：
@@ -265,4 +292,7 @@ wrapper 默认读取：
 npm test
 npm run typecheck
 npm run build
+npm pack --dry-run
 ```
+
+GitHub Actions 会在 push 和 pull request 上运行 `npm ci`、`npm run typecheck`、`npm test` 和 `npm run build`。

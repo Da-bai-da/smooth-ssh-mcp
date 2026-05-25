@@ -20,6 +20,7 @@ git clone https://github.com/Da-bai-da/smooth-ssh-mcp.git
 cd smooth-ssh-mcp
 npm install
 npm run build
+node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml
 ```
 
 See the language-specific README for host inventory, MCP client configuration, permission levels, confirmation flow, and security model.
