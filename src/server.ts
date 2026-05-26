@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { defaultInventoryPath, loadInventory } from "./inventory.js";
@@ -10,7 +10,7 @@ import { JsonlAuditor } from "./audit.js";
 import { SshOperations } from "./operations.js";
 import type { Inventory } from "./types.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 
 export function parseArgs(argv: string[]): { mode: "serve" | "doctor" | "init" | "help" | "version"; configPath: string; secretsPath?: string; json: boolean; force: boolean } {
   const mode = argv[0] === "--help" || argv[0] === "-h" ? "help" : argv[0] === "--version" || argv[0] === "-v" ? "version" : argv[0] === "doctor" ? "doctor" : argv[0] === "init" ? "init" : "serve";
@@ -35,7 +35,7 @@ function parseOptionalValue(argv: string[], flag: string): string | undefined {
 
 function formatHelp(): string {
   return [
-    "smooth-ssh-mcp 0.1.0",
+    "smooth-ssh-mcp 0.1.1",
     "",
     "Usage:",
     "  smooth-ssh-mcp [--config <hosts.yaml>]",
@@ -127,5 +127,12 @@ if (isDirectExecution()) {
 }
 
 function isDirectExecution(): boolean {
-  return process.argv[1] === fileURLToPath(import.meta.url);
+  const entryPath = process.argv[1];
+  if (!entryPath) return false;
+  const currentPath = fileURLToPath(import.meta.url);
+  try {
+    return realpathSync(entryPath) === realpathSync(currentPath);
+  } catch {
+    return entryPath === currentPath;
+  }
 }
