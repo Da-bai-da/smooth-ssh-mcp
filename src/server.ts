@@ -9,11 +9,10 @@ import { formatInitReport, runInit } from "./init.js";
 import { JsonlAuditor } from "./audit.js";
 import { SshOperations } from "./operations.js";
 import type { Inventory } from "./types.js";
-
-const VERSION = "0.1.1";
+import { PACKAGE_VERSION } from "./version.js";
 
 export function parseArgs(argv: string[]): { mode: "serve" | "doctor" | "init" | "help" | "version"; configPath: string; secretsPath?: string; json: boolean; force: boolean } {
-  const mode = argv[0] === "--help" || argv[0] === "-h" ? "help" : argv[0] === "--version" || argv[0] === "-v" ? "version" : argv[0] === "doctor" ? "doctor" : argv[0] === "init" ? "init" : "serve";
+  const mode = argv.includes("--help") || argv.includes("-h") ? "help" : argv.includes("--version") || argv.includes("-v") ? "version" : argv[0] === "doctor" ? "doctor" : argv[0] === "init" ? "init" : "serve";
   const args = mode === "serve" ? argv : argv.slice(1);
   const configIndex = args.findIndex((arg) => arg === "--config" || arg === "-c");
   if (configIndex >= 0) {
@@ -35,7 +34,7 @@ function parseOptionalValue(argv: string[], flag: string): string | undefined {
 
 function formatHelp(): string {
   return [
-    "smooth-ssh-mcp 0.1.1",
+    `smooth-ssh-mcp ${PACKAGE_VERSION}`,
     "",
     "Usage:",
     "  smooth-ssh-mcp [--config <hosts.yaml>]",
@@ -73,7 +72,7 @@ export async function main(): Promise<void> {
     process.exit(0);
   }
   if (args.mode === "version") {
-    console.log(VERSION);
+    console.log(PACKAGE_VERSION);
     process.exit(0);
   }
   if (args.mode === "doctor") {
@@ -88,7 +87,7 @@ export async function main(): Promise<void> {
   }
   const { configPath } = args;
   const inventory = loadInventoryForServer(configPath);
-  const operations = new SshOperations({ inventory });
+  const operations = new SshOperations({ inventory, configPath: args.configPath, secretsPath: args.secretsPath });
   installShutdownCleanup(operations);
   const server = createMcpServer(operations, { auditor: new JsonlAuditor() });
   process.stdin.resume();

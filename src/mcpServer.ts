@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { SshOperations } from "./operations.js";
 import type { Auditor } from "./audit.js";
 import type { ConfirmationRequired } from "./types.js";
+import { PACKAGE_VERSION } from "./version.js";
 
 const LOCAL_READ_HINT: ToolAnnotations = {
   readOnlyHint: true,
@@ -29,7 +30,7 @@ const CONNECTION_HINT: ToolAnnotations = {
 const LOCAL_STATE_HINT: ToolAnnotations = {
   readOnlyHint: false,
   destructiveHint: false,
-  idempotentHint: true,
+  idempotentHint: false,
   openWorldHint: false
 };
 
@@ -47,7 +48,7 @@ type McpServerOptions = {
 export function createMcpServer(operations: SshOperations, options: McpServerOptions = {}): McpServer {
   const server = new McpServer({
     name: "smooth-ssh-mcp",
-    version: "0.1.0"
+    version: PACKAGE_VERSION
   });
   const toolHandler = createToolHandler(options.auditor);
 
@@ -73,6 +74,138 @@ export function createMcpServer(operations: SshOperations, options: McpServerOpt
       }
     },
     toolHandler("host_get", async ({ hostId }) => operations.hostGet(hostId))
+  );
+
+  server.registerTool(
+    "host_add",
+    {
+      title: "Add SSH host",
+      description: "Add a host to the local Smooth SSH inventory after confirmation. Passwords are written to the secrets file through passwordEnv, not inline in hosts.yaml.",
+      annotations: LOCAL_STATE_HINT,
+      inputSchema: {
+        id: z.string().min(1),
+        hostname: z.string().min(1).optional(),
+        sshConfigHost: z.string().min(1).optional(),
+        port: z.number().int().min(1).max(65535).optional(),
+        user: z.string().min(1).optional(),
+        identityFile: z.string().min(1).optional(),
+        passwordEnv: z.string().min(1).optional(),
+        password: z.string().min(1).optional(),
+        proxyJump: z.string().min(1).optional(),
+        defaultCwd: z.string().min(1).optional(),
+        tags: z.array(z.string()).optional(),
+        environment: z.enum(["dev", "staging", "prod", "unknown"]).optional(),
+        capabilities: z
+          .object({
+            sudo: z.boolean().optional(),
+            docker: z.boolean().optional(),
+            nginx: z.boolean().optional(),
+            systemd: z.boolean().optional(),
+            openwrt: z.boolean().optional()
+          })
+          .optional(),
+        policy: z
+          .object({
+            allowExec: z.boolean().optional(),
+            allowPty: z.boolean().optional(),
+            allowUpload: z.boolean().optional(),
+            allowDownload: z.boolean().optional(),
+            allowForward: z.boolean().optional(),
+            acceptNewHostKey: z.boolean().optional(),
+            requireConfirmForSudo: z.boolean().optional(),
+            requireConfirmForWrite: z.boolean().optional(),
+            requireConfirmForProd: z.boolean().optional(),
+            permissionLevel: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+            deniedCommandPatterns: z.array(z.string()).optional(),
+            maxCommandSeconds: z.number().int().min(1).optional(),
+            maxOutputBytes: z.number().int().min(1).optional()
+          })
+          .optional(),
+        confirmationToken: z.string().optional()
+      }
+    },
+    toolHandler("host_add", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.hostAdd(confirmedInput)))
+  );
+
+  server.registerTool(
+    "host_update",
+    {
+      title: "Update SSH host",
+      description: "Update a host in the local Smooth SSH inventory after confirmation. Passwords are written through passwordEnv, not inline in hosts.yaml.",
+      annotations: LOCAL_STATE_HINT,
+      inputSchema: {
+        hostId: z.string().min(1),
+        hostname: z.string().min(1).optional(),
+        sshConfigHost: z.string().min(1).optional(),
+        port: z.number().int().min(1).max(65535).optional(),
+        user: z.string().min(1).optional(),
+        identityFile: z.string().min(1).optional(),
+        passwordEnv: z.string().min(1).optional(),
+        password: z.string().min(1).optional(),
+        proxyJump: z.string().min(1).optional(),
+        defaultCwd: z.string().min(1).optional(),
+        tags: z.array(z.string()).optional(),
+        environment: z.enum(["dev", "staging", "prod", "unknown"]).optional(),
+        capabilities: z
+          .object({
+            sudo: z.boolean().optional(),
+            docker: z.boolean().optional(),
+            nginx: z.boolean().optional(),
+            systemd: z.boolean().optional(),
+            openwrt: z.boolean().optional()
+          })
+          .optional(),
+        policy: z
+          .object({
+            allowExec: z.boolean().optional(),
+            allowPty: z.boolean().optional(),
+            allowUpload: z.boolean().optional(),
+            allowDownload: z.boolean().optional(),
+            allowForward: z.boolean().optional(),
+            acceptNewHostKey: z.boolean().optional(),
+            requireConfirmForSudo: z.boolean().optional(),
+            requireConfirmForWrite: z.boolean().optional(),
+            requireConfirmForProd: z.boolean().optional(),
+            permissionLevel: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+            deniedCommandPatterns: z.array(z.string()).optional(),
+            maxCommandSeconds: z.number().int().min(1).optional(),
+            maxOutputBytes: z.number().int().min(1).optional()
+          })
+          .optional(),
+        confirmationToken: z.string().optional()
+      }
+    },
+    toolHandler("host_update", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.hostUpdate(confirmedInput)))
+  );
+
+  server.registerTool(
+    "host_remove",
+    {
+      title: "Remove SSH host",
+      description: "Remove a host from the local Smooth SSH inventory after confirmation. Optionally removes the referenced passwordEnv secret.",
+      annotations: LOCAL_STATE_HINT,
+      inputSchema: {
+        hostId: z.string().min(1),
+        removeSecret: z.boolean().optional(),
+        confirmationToken: z.string().optional()
+      }
+    },
+    toolHandler("host_remove", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.hostRemove(confirmedInput)))
+  );
+
+  server.registerTool(
+    "secret_set",
+    {
+      title: "Set Smooth SSH secret",
+      description: "Write one environment variable secret to the Smooth SSH secrets file after confirmation.",
+      annotations: LOCAL_STATE_HINT,
+      inputSchema: {
+        key: z.string().min(1),
+        value: z.string().min(1),
+        confirmationToken: z.string().optional()
+      }
+    },
+    toolHandler("secret_set", async (input) => runWithOptionalChoiceConfirmation(server, input, (confirmedInput) => operations.secretSet(confirmedInput)))
   );
 
   server.registerTool(

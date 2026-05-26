@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMcpServer } from "../src/mcpServer.js";
 import type { SshOperations } from "../src/operations.js";
+import packageJson from "../package.json" with { type: "json" };
 
 type RegisteredTool = {
   annotations?: {
@@ -17,6 +18,13 @@ function registeredTools(): Record<string, RegisteredTool> {
 }
 
 describe("MCP tool metadata", () => {
+  it("uses the package version in MCP server metadata", () => {
+    const server = createMcpServer({} as SshOperations);
+    const info = (server as unknown as { server: { _serverInfo: { version: string } } }).server._serverInfo;
+
+    expect(info.version).toBe(packageJson.version);
+  });
+
   it("marks connection and observation tools as low-friction read-only hints", () => {
     const tools = registeredTools();
 
@@ -49,6 +57,18 @@ describe("MCP tool metadata", () => {
       expect(tools[name]?.annotations, name).toMatchObject({
         readOnlyHint: false,
         destructiveHint: true
+      });
+    }
+  });
+
+  it("exposes host config tools as confirmed local state tools", () => {
+    const tools = registeredTools();
+
+    for (const name of ["host_add", "host_update", "host_remove", "secret_set"]) {
+      expect(tools[name]?.annotations, name).toMatchObject({
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false
       });
     }
   });

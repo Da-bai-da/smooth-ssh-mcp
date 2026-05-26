@@ -71,6 +71,10 @@ export function findHost(inventory: Inventory, hostId: string): Host {
   return host;
 }
 
+export function normalizeHostRecord(raw: Record<string, unknown>): Host {
+  return normalizeHost(raw);
+}
+
 export function defaultInventoryPath(): string {
   return process.env.SMOOTH_SSH_MCP_CONFIG ?? "~/.config/smooth-ssh-mcp/hosts.yaml";
 }

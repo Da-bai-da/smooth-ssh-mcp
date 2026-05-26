@@ -1,4 +1,8 @@
+import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { loadInventory } from "../src/inventory.js";
 import { SshOperations } from "../src/operations.js";
 import { issueConfirmation } from "../src/policy.js";
 import type { SessionManager } from "../src/sessionManager.js";
@@ -1330,6 +1334,7 @@ describe("SshOperations", () => {
 
     expect(operations.capabilityList()).toMatchObject({
       capabilities: expect.arrayContaining([
+        expect.objectContaining({ id: "host_add", preferredTool: "host_add" }),
         expect.objectContaining({ id: "host_health", preferredTool: "host_health" }),
         expect.objectContaining({ id: "single_command", preferredTool: "ssh_command" }),
         expect.objectContaining({ id: "batch_tasks", preferredTool: "task_batch" })
@@ -1478,6 +1483,245 @@ describe("SshOperations", () => {
     });
     expect(JSON.stringify(result)).not.toContain('"stderr"');
     expect(result).not.toHaveProperty("checks");
+  });
+
+  it("requires confirmation before adding a host to the local inventory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "smooth-ssh-host-add-"));
+    const configPath = join(dir, "hosts.yaml");
+    const secretsPath = join(dir, "secrets.env");
+    writeFileSync(configPath, "hosts: []\n", { mode: 0o600 });
+    const operations = new SshOperations({
+      inventory: { hosts: [] },
+      runner: new FakeRunner(),
+      controlDir: "/tmp/smooth-ssh-mcp-test",
+      stateStore: new StateStore(),
+      configPath,
+      secretsPath
+    });
+
+    const result = operations.hostAdd({
+      id: "lab",
+      hostname: "192.0.2.10",
+      user: "root",
+      password: "secret-password"
+    });
+
+    expect(result).toMatchObject({
+      confirmationRequired: true,
+      hostId: "lab",
+      operation: "config"
+    });
+    expect(readFileSync(configPath, "utf8")).toBe("hosts: []\n");
+    expect(existsSync(secretsPath)).toBe(false);
+  });
+
+  it("adds a password host after confirmation without writing inline passwords", () => {
+    const dir = mkdtempSync(join(tmpdir(), "smooth-ssh-host-add-"));
+    const configPath = join(dir, "hosts.yaml");
+    const secretsPath = join(dir, "secrets.env");
+    writeFileSync(configPath, "hosts: []\n", { mode: 0o600 });
+    const operations = new SshOperations({
+      inventory: { hosts: [] },
+      runner: new FakeRunner(),
+      controlDir: "/tmp/smooth-ssh-mcp-test",
+      stateStore: new StateStore(),
+      configPath,
+      secretsPath
+    });
+    const input = {
+      id: "lab",
+      hostname: "192.0.2.10",
+      user: "root",
+      port: 2222,
+      password: "secret-password",
+      tags: ["test"],
+      environment: "dev" as const
+    };
+    const confirmation = operations.hostAdd(input);
+    if (!("confirmationRequired" in confirmation)) throw new Error("expected confirmation");
+
+    const result = operations.hostAdd({ ...input, confirmationToken: confirmation.token });
+
+    expect(result).toMatchObject({
+      hostId: "lab",
+      added: true,
+      hasPasswordEnv: true,
+      configPath,
+      secretsPath
+    });
+    const configText = readFileSync(configPath, "utf8");
+    expect(configText).toContain("id: lab");
+    expect(configText).toContain("passwordEnv: SMOOTH_SSH_PASSWORD_LAB");
+    expect(configText).not.toContain("secret-password");
+    expect(readFileSync(secretsPath, "utf8")).toContain("SMOOTH_SSH_PASSWORD_LAB=secret-password\n");
+    expect((statSync(configPath).mode & 0o777).toString(8)).toBe("600");
+    expect((statSync(secretsPath).mode & 0o777).toString(8)).toBe("600");
+    expect(loadInventory(configPath).hosts[0]).toMatchObject({
+      id: "lab",
+      hostname: "192.0.2.10",
+      user: "root",
+      port: 2222,
+      passwordEnv: "SMOOTH_SSH_PASSWORD_LAB"
+    });
+    expect(operations.hostGet("lab")).toMatchObject({
+      id: "lab",
+      hasPasswordEnv: true
+    });
+  });
+
+  it("updates a host after confirmation and keeps password out of hosts.yaml", () => {
+    const dir = mkdtempSync(join(tmpdir(), "smooth-ssh-host-update-"));
+    const configPath = join(dir, "hosts.yaml");
+    const secretsPath = join(dir, "secrets.env");
+    writeFileSync(
+      configPath,
+      [
+        "hosts:",
+        "  - id: lab",
+        "    hostname: 192.0.2.10",
+        "    user: root",
+        "    passwordEnv: SMOOTH_SSH_PASSWORD_LAB"
+      ].join("\n") + "\n",
+      { mode: 0o600 }
+    );
+    writeFileSync(secretsPath, "SMOOTH_SSH_PASSWORD_LAB=old-secret\n", { mode: 0o600 });
+    const operations = new SshOperations({
+      inventory: loadInventory(configPath),
+      runner: new FakeRunner(),
+      controlDir: "/tmp/smooth-ssh-mcp-test",
+      stateStore: new StateStore(),
+      configPath,
+      secretsPath
+    });
+    const input = {
+      hostId: "lab",
+      hostname: "192.0.2.11",
+      port: 2222,
+      tags: ["updated"],
+      password: "new-secret"
+    };
+
+    const confirmation = operations.hostUpdate(input);
+
+    expect(confirmation).toMatchObject({
+      confirmationRequired: true,
+      hostId: "lab",
+      operation: "config"
+    });
+    expect(readFileSync(configPath, "utf8")).toContain("hostname: 192.0.2.10");
+    expect(readFileSync(secretsPath, "utf8")).toContain("old-secret");
+    if (!("confirmationRequired" in confirmation)) throw new Error("expected confirmation");
+    expect(confirmation.preview.command).toContain("passwordEnv=SMOOTH_SSH_PASSWORD_LAB");
+
+    const result = operations.hostUpdate({ ...input, confirmationToken: confirmation.token });
+
+    expect(result).toMatchObject({
+      hostId: "lab",
+      updated: true,
+      hasPasswordEnv: true
+    });
+    const configText = readFileSync(configPath, "utf8");
+    expect(configText).toContain("hostname: 192.0.2.11");
+    expect(configText).toContain("port: 2222");
+    expect(configText).toContain("passwordEnv: SMOOTH_SSH_PASSWORD_LAB");
+    expect(configText).not.toContain("new-secret");
+    expect(readFileSync(secretsPath, "utf8")).toContain("SMOOTH_SSH_PASSWORD_LAB=new-secret\n");
+    expect(loadInventory(configPath).hosts[0]).toMatchObject({
+      id: "lab",
+      hostname: "192.0.2.11",
+      port: 2222,
+      passwordEnv: "SMOOTH_SSH_PASSWORD_LAB"
+    });
+    expect(operations.hostGet("lab")).toMatchObject({
+      id: "lab",
+      hostname: "192.0.2.11"
+    });
+  });
+
+  it("removes a host and its password secret after confirmation", () => {
+    const dir = mkdtempSync(join(tmpdir(), "smooth-ssh-host-remove-"));
+    const configPath = join(dir, "hosts.yaml");
+    const secretsPath = join(dir, "secrets.env");
+    writeFileSync(
+      configPath,
+      [
+        "hosts:",
+        "  - id: lab",
+        "    hostname: 192.0.2.10",
+        "    passwordEnv: SMOOTH_SSH_PASSWORD_LAB",
+        "  - id: keep",
+        "    hostname: 192.0.2.20"
+      ].join("\n") + "\n",
+      { mode: 0o600 }
+    );
+    writeFileSync(secretsPath, "SMOOTH_SSH_PASSWORD_LAB=secret\nOTHER=1\n", { mode: 0o600 });
+    const operations = new SshOperations({
+      inventory: loadInventory(configPath),
+      runner: new FakeRunner(),
+      controlDir: "/tmp/smooth-ssh-mcp-test",
+      stateStore: new StateStore(),
+      configPath,
+      secretsPath
+    });
+
+    const confirmation = operations.hostRemove({ hostId: "lab", removeSecret: true });
+
+    expect(confirmation).toMatchObject({
+      confirmationRequired: true,
+      hostId: "lab",
+      operation: "config"
+    });
+    expect(readFileSync(configPath, "utf8")).toContain("id: lab");
+    if (!("confirmationRequired" in confirmation)) throw new Error("expected confirmation");
+
+    const result = operations.hostRemove({ hostId: "lab", removeSecret: true, confirmationToken: confirmation.token });
+
+    expect(result).toMatchObject({
+      hostId: "lab",
+      removed: true,
+      removedPasswordEnv: "SMOOTH_SSH_PASSWORD_LAB"
+    });
+    expect(readFileSync(configPath, "utf8")).not.toContain("id: lab");
+    expect(readFileSync(configPath, "utf8")).toContain("id: keep");
+    expect(readFileSync(secretsPath, "utf8")).not.toContain("SMOOTH_SSH_PASSWORD_LAB");
+    expect(readFileSync(secretsPath, "utf8")).toContain("OTHER=1");
+    expect(() => operations.hostGet("lab")).toThrow(/host not found/i);
+  });
+
+  it("sets a secret after confirmation without returning the secret value", () => {
+    const dir = mkdtempSync(join(tmpdir(), "smooth-ssh-secret-set-"));
+    const configPath = join(dir, "hosts.yaml");
+    const secretsPath = join(dir, "secrets.env");
+    writeFileSync(configPath, "hosts: []\n", { mode: 0o600 });
+    const operations = new SshOperations({
+      inventory: { hosts: [] },
+      runner: new FakeRunner(),
+      controlDir: "/tmp/smooth-ssh-mcp-test",
+      stateStore: new StateStore(),
+      configPath,
+      secretsPath
+    });
+
+    const confirmation = operations.secretSet({ key: "SMOOTH_SSH_PASSWORD_LAB", value: "secret-value" });
+
+    expect(confirmation).toMatchObject({
+      confirmationRequired: true,
+      hostId: "local-config",
+      operation: "config"
+    });
+    expect(existsSync(secretsPath)).toBe(false);
+    if (!("confirmationRequired" in confirmation)) throw new Error("expected confirmation");
+
+    const result = operations.secretSet({ key: "SMOOTH_SSH_PASSWORD_LAB", value: "secret-value", confirmationToken: confirmation.token });
+
+    expect(result).toMatchObject({
+      key: "SMOOTH_SSH_PASSWORD_LAB",
+      updated: true,
+      secretsPath
+    });
+    expect(JSON.stringify(result)).not.toContain("secret-value");
+    expect(readFileSync(secretsPath, "utf8")).toBe("SMOOTH_SSH_PASSWORD_LAB=secret-value\n");
+    expect((statSync(secretsPath).mode & 0o777).toString(8)).toBe("600");
   });
 });
 

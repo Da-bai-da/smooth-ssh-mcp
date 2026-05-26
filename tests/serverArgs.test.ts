@@ -39,4 +39,11 @@ describe("server args", () => {
     expect(parseArgs(["--version"])).toMatchObject({ mode: "version" });
     expect(parseArgs(["-v"])).toMatchObject({ mode: "version" });
   });
+
+  it("parses subcommand help before executing the subcommand", () => {
+    expect(parseArgs(["init", "--help"])).toMatchObject({ mode: "help" });
+    expect(parseArgs(["init", "-h"])).toMatchObject({ mode: "help" });
+    expect(parseArgs(["doctor", "--help"])).toMatchObject({ mode: "help" });
+    expect(parseArgs(["doctor", "-h"])).toMatchObject({ mode: "help" });
+  });
 });

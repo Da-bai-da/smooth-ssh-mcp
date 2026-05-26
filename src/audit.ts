@@ -22,7 +22,7 @@ export type JsonlAuditorOptions = {
   now?: () => Date;
 };
 
-const SENSITIVE_KEYS = new Set(["confirmationToken", "env", "stdin", "input", "password", "passwordEnv", "secret", "token"]);
+const SENSITIVE_KEYS = new Set(["confirmationToken", "env", "stdin", "input", "password", "passwordEnv", "secret", "token", "value"]);
 
 export class JsonlAuditor implements Auditor {
   private readonly path: string;
@@ -79,6 +79,7 @@ function inferOperation(tool: string, result: unknown): string {
   if (tool.includes("download")) return "download";
   if (tool.includes("forward")) return "forward";
   if (tool.includes("session")) return "pty";
+  if (["host_add", "host_update", "host_remove", "secret_set"].some((name) => tool.includes(name))) return "config";
   if (tool.includes("permission")) return "permission";
   if (tool.includes("ssh") || tool.includes("task") || tool.includes("cleanup")) return "exec";
   return "local";

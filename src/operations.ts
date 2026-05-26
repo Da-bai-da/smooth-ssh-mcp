@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { join, posix as pathPosix } from "node:path";
 import { wrapWithPasswordAuth } from "./auth.js";
 import { buildScpArgs, buildSshArgs, controlPathForHost } from "./sshArgs.js";
+import { InventoryConfigStore, type HostAddInput, type HostRemoveInput, type HostUpdateInput, type SecretSetInput } from "./configStore.js";
 import { ForwardManager } from "./forwardManager.js";
 import { findHost } from "./inventory.js";
 import { evaluateOperationPolicy, issueConfirmation, verifyConfirmation } from "./policy.js";
@@ -21,6 +22,8 @@ type OperationsOptions = {
   forwardManager?: ForwardManager;
   env?: NodeJS.ProcessEnv;
   stateStore?: StateStore;
+  configPath?: string;
+  secretsPath?: string;
 };
 
 type ExecInput = {
@@ -138,6 +141,7 @@ export class SshOperations {
   private readonly env: NodeJS.ProcessEnv;
   private readonly stateStore: StateStore;
   private readonly sessionInputBuffers = new Map<string, string>();
+  private readonly configStore: InventoryConfigStore;
 
   constructor(options: OperationsOptions) {
     this.inventory = options.inventory;
@@ -147,6 +151,7 @@ export class SshOperations {
     this.sessions = options.sessionManager ?? new SessionManager({ controlDir: this.controlDir, env: this.env });
     this.forwards = options.forwardManager ?? new ForwardManager({ controlDir: this.controlDir, env: this.env });
     this.stateStore = options.stateStore ?? new StateStore(defaultStatePath());
+    this.configStore = new InventoryConfigStore({ configPath: options.configPath, secretsPath: options.secretsPath, env: this.env });
   }
 
   dispose(): void {
@@ -168,6 +173,110 @@ export class SshOperations {
   hostGet(hostId: string): Omit<Host, "identityFile" | "passwordEnv"> & { hasIdentityFile: boolean; hasPasswordEnv: boolean } {
     const { identityFile, passwordEnv, ...host } = this.findEffectiveHost(hostId);
     return { ...host, hasIdentityFile: Boolean(identityFile), hasPasswordEnv: Boolean(passwordEnv) };
+  }
+
+  hostAdd(input: HostAddInput & { confirmationToken?: string }): ReturnType<InventoryConfigStore["addHost"]> | ConfirmationRequired {
+    const { confirmationToken, ...hostInput } = input;
+    if (this.inventory.hosts.some((host) => host.id === hostInput.id)) {
+      throw new Error(`Host already exists in inventory: ${hostInput.id}`);
+    }
+    const prepared = this.configStore.prepareHostAdd(hostInput);
+    const stdinHash = hashOptionalInput(prepared.password);
+    if (
+      !verifyConfirmation(confirmationToken, {
+        host: prepared.host,
+        operation: "config",
+        command: prepared.command,
+        stdinHash
+      })
+    ) {
+      return issueConfirmation({
+        host: prepared.host,
+        operation: "config",
+        command: prepared.command,
+        stdinHash,
+        reasons: ["host_add writes local SSH inventory configuration"]
+      });
+    }
+
+    const result = this.configStore.addHost(hostInput);
+    this.refreshInventoryFromConfig();
+    return result;
+  }
+
+  hostUpdate(input: HostUpdateInput & { confirmationToken?: string }): ReturnType<InventoryConfigStore["updateHost"]> | ConfirmationRequired {
+    const { confirmationToken, ...hostInput } = input;
+    findHost(this.inventory, hostInput.hostId);
+    const prepared = this.configStore.prepareHostUpdate(hostInput);
+    const stdinHash = hashOptionalInput(prepared.password);
+    if (
+      !verifyConfirmation(confirmationToken, {
+        host: prepared.host,
+        operation: "config",
+        command: prepared.command,
+        stdinHash
+      })
+    ) {
+      return issueConfirmation({
+        host: prepared.host,
+        operation: "config",
+        command: prepared.command,
+        stdinHash,
+        reasons: ["host_update writes local SSH inventory configuration"]
+      });
+    }
+
+    const result = this.configStore.updateHost(hostInput);
+    this.refreshInventoryFromConfig();
+    return result;
+  }
+
+  hostRemove(input: HostRemoveInput & { confirmationToken?: string }): ReturnType<InventoryConfigStore["removeHost"]> | ConfirmationRequired {
+    const { confirmationToken, ...removeInput } = input;
+    const host = findHost(this.inventory, removeInput.hostId);
+    const prepared = this.configStore.prepareHostRemove(removeInput);
+    if (
+      !verifyConfirmation(confirmationToken, {
+        host,
+        operation: "config",
+        command: prepared.command
+      })
+    ) {
+      return issueConfirmation({
+        host,
+        operation: "config",
+        command: prepared.command,
+        reasons: ["host_remove writes local SSH inventory configuration"]
+      });
+    }
+
+    const result = this.configStore.removeHost(removeInput);
+    this.refreshInventoryFromConfig();
+    return result;
+  }
+
+  secretSet(input: SecretSetInput & { confirmationToken?: string }): ReturnType<InventoryConfigStore["setSecret"]> | ConfirmationRequired {
+    const { confirmationToken, ...secretInput } = input;
+    const prepared = this.configStore.prepareSecretSet(secretInput);
+    const stdinHash = hashOptionalInput(prepared.value);
+    if (
+      !verifyConfirmation(confirmationToken, {
+        host: prepared.host,
+        operation: "config",
+        command: prepared.command,
+        stdinHash
+      })
+    ) {
+      return issueConfirmation({
+        host: prepared.host,
+        operation: "config",
+        command: prepared.command,
+        stdinHash,
+        reasons: ["secret_set writes local Smooth SSH secrets"]
+      });
+    }
+
+    return this.configStore.setSecret(secretInput);
   }
 
   hostSelect(input: { hostId: string }): { selectedHostId?: string; recentHosts: unknown[] } {
@@ -211,6 +320,30 @@ export class SshOperations {
   capabilityList(): Record<string, unknown> {
     return {
       capabilities: [
+        {
+          id: "host_add",
+          preferredTool: "host_add",
+          access: "confirmed-local-write",
+          description: "Add a host to the local inventory after confirmation. Passwords are stored through passwordEnv in the secrets file."
+        },
+        {
+          id: "host_update",
+          preferredTool: "host_update",
+          access: "confirmed-local-write",
+          description: "Update a host in the local inventory after confirmation."
+        },
+        {
+          id: "host_remove",
+          preferredTool: "host_remove",
+          access: "confirmed-local-write",
+          description: "Remove a host from the local inventory after confirmation."
+        },
+        {
+          id: "secret_set",
+          preferredTool: "secret_set",
+          access: "confirmed-local-write",
+          description: "Write one secret to the Smooth SSH secrets file after confirmation."
+        },
         {
           id: "host_health",
           preferredTool: "host_health",
@@ -766,6 +899,11 @@ export class SshOperations {
 
   forwardList(): unknown {
     return this.forwards.list();
+  }
+
+  private refreshInventoryFromConfig(): void {
+    const refreshed = this.configStore.loadInventory();
+    this.inventory.hosts.splice(0, this.inventory.hosts.length, ...refreshed.hosts);
   }
 
   private findEffectiveHost(hostId: string): Host {

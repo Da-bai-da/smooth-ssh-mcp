@@ -44,6 +44,7 @@
 - `file_upload` / `file_download` 通过 SCP 传输文件。
 - `forward_start` / `forward_stop` / `forward_list` 管理本地端口转发。
 - `host_select` / `host_recent` / `host_permission_set` 持久化本地状态。
+- `host_add` / `host_update` / `host_remove` / `secret_set` 通过确认流程管理本地主机配置和 secrets。
 
 ## 安装
 
@@ -185,6 +186,10 @@ wrapper 默认读取：
 | `capability_list` | 列出结构化能力和 shell fallback 策略。 |
 | `host_list` | 列出主机别名和非敏感元数据。 |
 | `host_get` | 查看单个主机配置，不返回密码或私钥内容。 |
+| `host_add` | 确认后把主机添加到本地 inventory。密码通过 `passwordEnv` 写入 secrets，不写进 hosts.yaml。 |
+| `host_update` | 确认后更新本地 inventory 中的主机。 |
+| `host_remove` | 确认后从本地 inventory 删除主机，可选删除对应 secret。 |
+| `secret_set` | 确认后向本地 Smooth SSH secrets 文件写入一个 key。 |
 | `host_select` | 保存当前默认主机。 |
 | `host_recent` | 查看当前选择和最近使用过的主机。 |
 | `host_permission_set` | 保存某台主机的权限等级。设置 `1` 需要确认。 |

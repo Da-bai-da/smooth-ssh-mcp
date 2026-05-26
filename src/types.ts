@@ -1,6 +1,6 @@
 export type Environment = "dev" | "staging" | "prod" | "unknown";
 export type RiskLevel = "low" | "medium" | "high" | "critical";
-export type Operation = "exec" | "pty" | "pty-input" | "upload" | "download" | "forward" | "permission";
+export type Operation = "exec" | "pty" | "pty-input" | "upload" | "download" | "forward" | "permission" | "config";
 export type PermissionLevel = 1 | 2 | 3;
 export type CommandMode = "shell" | "argv";
 export type CommandAccess = "read" | "write" | "restart" | "firewall" | "destructive" | "unknown";

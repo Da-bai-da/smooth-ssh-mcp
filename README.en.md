@@ -44,6 +44,7 @@ It is not meant to replace tmux, full-screen TUI programs, long-running unattend
 - SCP transfer through `file_upload` and `file_download`.
 - Managed local forwards through `forward_start`, `forward_stop`, and `forward_list`.
 - Persistent local state through `host_select`, `host_recent`, and `host_permission_set`.
+- Confirmed local host configuration through `host_add`, `host_update`, `host_remove`, and `secret_set`.
 
 ## Installation
 
@@ -185,6 +186,10 @@ The wrapper reads:
 | `capability_list` | Lists structured capabilities and the shell fallback policy. |
 | `host_list` | Lists host aliases and non-secret metadata. |
 | `host_get` | Shows one host without returning passwords or private key contents. |
+| `host_add` | Adds a host to the local inventory after confirmation. Passwords are written through `passwordEnv`, not inline. |
+| `host_update` | Updates a host in the local inventory after confirmation. |
+| `host_remove` | Removes a host from the local inventory after confirmation, optionally removing its referenced secret. |
+| `secret_set` | Writes one key to the local Smooth SSH secrets file after confirmation. |
 | `host_select` | Stores the current default host. |
 | `host_recent` | Shows the selected host and recently used hosts. |
 | `host_permission_set` | Stores a per-host permission level. Setting `1` requires confirmation. |

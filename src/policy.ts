@@ -316,7 +316,7 @@ function operationAllowed(host: Host, operation: Operation): boolean {
   if (operation === "pty-input") return host.policy.allowPty;
   if (operation === "upload") return host.policy.allowUpload;
   if (operation === "download") return host.policy.allowDownload;
-  if (operation === "permission") return true;
+  if (operation === "permission" || operation === "config") return true;
   return host.policy.allowForward;
 }
 
@@ -354,7 +354,7 @@ function commandAccessMayWrite(access: CommandAccess, command: string): boolean 
 
 function shouldConfirmForProd(operation: Operation, access: CommandAccess): boolean {
   if (operation === "pty") return false;
-  if (operation === "permission") return false;
+  if (operation === "permission" || operation === "config") return false;
   if (operationUsesCommandPolicy(operation) && access === "read") return false;
   return true;
 }
