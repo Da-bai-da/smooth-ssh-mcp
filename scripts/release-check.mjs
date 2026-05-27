@@ -38,7 +38,7 @@ function assertPackageMetadata(packageJson) {
   if (packageJson.bin?.["smooth-ssh-mcp"] !== "dist/server.js") {
     fail("package.json bin.smooth-ssh-mcp must point to dist/server.js");
   }
-  for (const expected of ["dist", "bin", "README.md", "README.en.md", "README.zh-CN.md", "LICENSE", "examples", "docs"]) {
+  for (const expected of ["dist", "bin", "README.md", "README.en.md", "README.zh-CN.md", "CHANGELOG.md", "LICENSE", "examples", "docs"]) {
     if (!packageJson.files?.includes(expected)) fail(`package.json files is missing ${expected}`);
   }
 }
@@ -49,6 +49,7 @@ function assertRequiredFiles() {
     "README.md",
     "README.en.md",
     "README.zh-CN.md",
+    "CHANGELOG.md",
     "bin/smooth-ssh-mcp-codex",
     "dist/server.js",
     "dist/version.js",
@@ -93,6 +94,7 @@ function assertPackContents() {
     "README.md",
     "README.en.md",
     "README.zh-CN.md",
+    "CHANGELOG.md",
     "bin/smooth-ssh-mcp-codex",
     "dist/server.js",
     "dist/version.js",
