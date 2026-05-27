@@ -314,11 +314,9 @@ SMOOTH_SSH_MCP_AUDIT_LOG=/path/to/audit.jsonl smooth-ssh-mcp
 ## 开发
 
 ```bash
-npm test
-npm run typecheck
-npm run build
-npm run test:cli
-npm pack --dry-run
+npm run release:check
 ```
 
-GitHub Actions 会在 push 和 pull request 上运行 `npm ci`、`npm run typecheck`、`npm test`、`npm run build`、CLI smoke test 和 `npm pack --dry-run`。
+`npm run release:check` 会运行类型检查、完整测试、构建、CLI smoke test、package 元数据检查、CLI 版本检查和 npm 打包 dry run。
+
+GitHub Actions 会在 push 和 pull request 上用 Node.js 20 和 24 跑同一套 release check。

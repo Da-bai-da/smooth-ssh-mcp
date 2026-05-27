@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:cli": "vitest run --config vitest.cli.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "release:check": "node scripts/release-check.mjs",
     "prepack": "npm run build"
   },
   "dependencies": {

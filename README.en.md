@@ -314,11 +314,9 @@ The state file stores only host IDs, timestamps, use counts, use reasons, and pe
 ## Development
 
 ```bash
-npm test
-npm run typecheck
-npm run build
-npm run test:cli
-npm pack --dry-run
+npm run release:check
 ```
 
-GitHub Actions runs `npm ci`, `npm run typecheck`, `npm test`, `npm run build`, CLI smoke tests, and `npm pack --dry-run` on pushes and pull requests.
+`npm run release:check` runs type checking, the full test suite, build, CLI smoke tests, package metadata checks, CLI version checks, and an npm package dry run.
+
+GitHub Actions runs the same release check on Node.js 20 and 24 for pushes and pull requests.
