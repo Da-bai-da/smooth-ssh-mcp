@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 - 2026-06-01
+
+- Breaking: renamed the local MCP client wrapper from `smooth-ssh-mcp-codex` to `smooth-ssh-mcp-local`.
+- Exposed `smooth-ssh-mcp-local` as an npm bin for stable global npm installs.
+- Updated client configuration examples to use the client-neutral local wrapper name.
+- Strengthened release checks to reject the old wrapper name in package metadata and tarball contents.
+
 ## 0.1.3 - 2026-05-27
 
 - Added a unified `npm run release:check` command for release readiness validation.

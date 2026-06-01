@@ -25,7 +25,7 @@ node dist/server.js doctor --config ~/.config/smooth-ssh-mcp/hosts.yaml --secret
 node dist/server.js --help
 ```
 
-After npm publication, use `npm install -g smooth-ssh-mcp` and replace `node dist/server.js` with `smooth-ssh-mcp`.
+After npm publication, use `npm install -g smooth-ssh-mcp` and replace `node dist/server.js` with `smooth-ssh-mcp`. For local MCP clients that should load `~/.config/smooth-ssh-mcp/secrets.env`, use `smooth-ssh-mcp-local`.
 
 See the language-specific README for host inventory, MCP client configuration, permission levels, confirmation flow, and security model.
 

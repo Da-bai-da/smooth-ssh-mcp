@@ -38,6 +38,12 @@ function assertPackageMetadata(packageJson) {
   if (packageJson.bin?.["smooth-ssh-mcp"] !== "dist/server.js") {
     fail("package.json bin.smooth-ssh-mcp must point to dist/server.js");
   }
+  if (packageJson.bin?.["smooth-ssh-mcp-local"] !== "bin/smooth-ssh-mcp-local") {
+    fail("package.json bin.smooth-ssh-mcp-local must point to bin/smooth-ssh-mcp-local");
+  }
+  if (packageJson.bin?.["smooth-ssh-mcp-codex"]) {
+    fail("package.json must not expose smooth-ssh-mcp-codex");
+  }
   for (const expected of ["dist", "bin", "README.md", "README.en.md", "README.zh-CN.md", "CHANGELOG.md", "LICENSE", "examples", "docs"]) {
     if (!packageJson.files?.includes(expected)) fail(`package.json files is missing ${expected}`);
   }
@@ -50,7 +56,7 @@ function assertRequiredFiles() {
     "README.en.md",
     "README.zh-CN.md",
     "CHANGELOG.md",
-    "bin/smooth-ssh-mcp-codex",
+    "bin/smooth-ssh-mcp-local",
     "dist/server.js",
     "dist/version.js",
     "docs/mcp-client.example.json",
@@ -60,11 +66,14 @@ function assertRequiredFiles() {
 
   for (const path of requiredFiles) requireFile(path);
 
-  const wrapper = requireFile("bin/smooth-ssh-mcp-codex");
+  const wrapper = requireFile("bin/smooth-ssh-mcp-local");
   const wrapperMode = statSync(wrapper).mode & 0o111;
-  if (wrapperMode === 0) fail("bin/smooth-ssh-mcp-codex must be executable");
+  if (wrapperMode === 0) fail("bin/smooth-ssh-mcp-local must be executable");
   if (!readFileSync(wrapper, "utf8").startsWith("#!/usr/bin/env bash")) {
-    fail("bin/smooth-ssh-mcp-codex must keep its bash shebang");
+    fail("bin/smooth-ssh-mcp-local must keep its bash shebang");
+  }
+  if (existsSync(join(rootDir, "bin/smooth-ssh-mcp-codex"))) {
+    fail("bin/smooth-ssh-mcp-codex must not exist");
   }
 
   if (!readFileSync(requireFile("dist/server.js"), "utf8").startsWith("#!/usr/bin/env node")) {
@@ -95,7 +104,7 @@ function assertPackContents() {
     "README.en.md",
     "README.zh-CN.md",
     "CHANGELOG.md",
-    "bin/smooth-ssh-mcp-codex",
+    "bin/smooth-ssh-mcp-local",
     "dist/server.js",
     "dist/version.js",
     "docs/mcp-client.example.json",
@@ -105,6 +114,9 @@ function assertPackContents() {
 
   for (const path of requiredPackFiles) {
     if (!files.has(path)) fail(`npm package is missing ${path}`);
+  }
+  if (files.has("bin/smooth-ssh-mcp-codex")) {
+    fail("npm package must not include bin/smooth-ssh-mcp-codex");
   }
 
   const forbiddenPrefixes = [".github/", "node_modules/", "scripts/", "src/", "tests/"];

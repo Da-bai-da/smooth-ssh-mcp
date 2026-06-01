@@ -165,11 +165,11 @@ stdio 示例：
 }
 ```
 
-Codex wrapper 示例：
+本地 wrapper 示例：
 
 ```toml
 [mcp_servers.smooth-ssh]
-command = "/path/to/smooth-ssh-mcp/bin/smooth-ssh-mcp-codex"
+command = "/home/you/.npm-global/bin/smooth-ssh-mcp-local"
 ```
 
 wrapper 默认读取：
@@ -178,6 +178,14 @@ wrapper 默认读取：
 - `SMOOTH_SSH_MCP_SECRETS`，默认 `~/.config/smooth-ssh-mcp/secrets.env`
 
 `secrets.env` 必须属于当前用户，权限必须是 `600` 或 `400`。wrapper 只按 `KEY=value` 数据格式导出变量，不执行 secrets 文件中的 shell 代码。
+
+Claude Code 可以使用同一个本地 wrapper：
+
+```bash
+claude mcp add --scope user --transport stdio smooth-ssh -- /home/you/.npm-global/bin/smooth-ssh-mcp-local
+```
+
+Hermes 和其他 stdio MCP client 也可以使用同一个命令路径：`/home/you/.npm-global/bin/smooth-ssh-mcp-local`。
 
 ## Tools
 

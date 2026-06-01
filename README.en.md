@@ -165,11 +165,11 @@ stdio example:
 }
 ```
 
-Codex wrapper example:
+Local wrapper example:
 
 ```toml
 [mcp_servers.smooth-ssh]
-command = "/path/to/smooth-ssh-mcp/bin/smooth-ssh-mcp-codex"
+command = "/home/you/.npm-global/bin/smooth-ssh-mcp-local"
 ```
 
 The wrapper reads:
@@ -178,6 +178,14 @@ The wrapper reads:
 - `SMOOTH_SSH_MCP_SECRETS`, defaulting to `~/.config/smooth-ssh-mcp/secrets.env`
 
 `secrets.env` must be owned by the current user and have mode `600` or `400`. The wrapper treats it as `KEY=value` data and does not execute shell code from it.
+
+Claude Code can use the same local wrapper:
+
+```bash
+claude mcp add --scope user --transport stdio smooth-ssh -- /home/you/.npm-global/bin/smooth-ssh-mcp-local
+```
+
+Hermes and other stdio MCP clients can use the same command path: `/home/you/.npm-global/bin/smooth-ssh-mcp-local`.
 
 ## Tools
 
