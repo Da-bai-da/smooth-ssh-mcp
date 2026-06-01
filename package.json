@@ -1,6 +1,6 @@
 {
   "name": "smooth-ssh-mcp",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "MCP server for safer, structured OpenSSH operations by AI assistants.",
   "type": "module",
   "bin": {

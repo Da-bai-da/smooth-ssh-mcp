@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5 - 2026-06-01
+
+- Fixed `smooth-ssh-mcp-local` when launched through npm global bin symlinks.
+- Forwarded CLI arguments through the local wrapper so `--version`, `--help`, and other commands work as expected.
+- Added a regression test for npm-style symlinked wrapper execution.
+
 ## 0.1.4 - 2026-06-01
 
 - Breaking: renamed the local MCP client wrapper from `smooth-ssh-mcp-codex` to `smooth-ssh-mcp-local`.

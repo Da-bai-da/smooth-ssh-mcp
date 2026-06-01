@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+  SOURCE_DIR="$(cd -P -- "$(dirname -- "$SOURCE")" && pwd)"
+  SOURCE_TARGET="$(readlink -- "$SOURCE")"
+  if [[ "$SOURCE_TARGET" == /* ]]; then
+    SOURCE="$SOURCE_TARGET"
+  else
+    SOURCE="$SOURCE_DIR/$SOURCE_TARGET"
+  fi
+done
+
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$SOURCE")" && pwd)"
+PROJECT_DIR="$(cd -P -- "$SCRIPT_DIR/.." && pwd)"
 
 SECRETS_FILE="${SMOOTH_SSH_MCP_SECRETS:-$HOME/.config/smooth-ssh-mcp/secrets.env}"
 CONFIG_FILE="${SMOOTH_SSH_MCP_CONFIG:-$HOME/.config/smooth-ssh-mcp/hosts.yaml}"
@@ -40,4 +51,4 @@ if [[ -f "$SECRETS_FILE" ]]; then
   done < "$SECRETS_FILE"
 fi
 
-exec node "$PROJECT_DIR/dist/server.js" --config "$CONFIG_FILE"
+exec node "$PROJECT_DIR/dist/server.js" "$@" --config "$CONFIG_FILE"
